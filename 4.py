@@ -27,29 +27,53 @@ os.makedirs(SAVE_FOLDER, exist_ok=True)
 
 # ---------------- UTILITY FUNCTIONS ----------------
 @st.cache_data(ttl=300)
-def get_cookies_from_firefox():
-    options = Options()
-    options.add_argument("--headless")
-    driver = webdriver.Firefox(options=options)
-    st.info("Opening NSE page in Firefox to fetch cookies...")
-    driver.get("https://www.nseindia.com/option-chain")
-    time.sleep(10)
-    cookies = driver.get_cookies()
-    driver.quit()
-    return "; ".join([f"{c['name']}={c['value']}" for c in cookies])
+def get_nse_session():
+    """
+    Create a requests session with NSE headers to fetch option chain data.
+    No Selenium required. Compatible with Streamlit Cloud.
+    """
+    import requests
 
-def fetch_option_chain(symbol, cookie_string):
-    url = f"https://www.nseindia.com/api/option-chain-indices?symbol={symbol}" if symbol in INDICES else f"https://www.nseindia.com/api/option-chain-equities?symbol={symbol}"
-    headers = {"User-Agent": "Mozilla/5.0", "Accept": "application/json, text/plain, */*", "Referer": "https://www.nseindia.com/option-chain", "Cookie": cookie_string}
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                      "AppleWebKit/537.36 (KHTML, like Gecko) "
+                      "Chrome/116.0.5845.97 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Referer": "https://www.nseindia.com/option-chain"
+    })
+
+    # Make initial request to set cookies
+    try:
+        response = session.get("https://www.nseindia.com/option-chain", timeout=10)
+        response.raise_for_status()
+    except Exception as e:
+        st.error(f"Failed to initialize NSE session: {e}")
+    
+    return session
+
+
+def fetch_option_chain(symbol, session):
+    """
+    Fetch NSE option chain data for the given symbol using a requests session.
+    Compatible with Streamlit Cloud (no Selenium required).
+    """
+    url = (
+        f"https://www.nseindia.com/api/option-chain-indices?symbol={symbol}"
+        if symbol in INDICES
+        else f"https://www.nseindia.com/api/option-chain-equities?symbol={symbol}"
+    )
+
     for attempt in range(3):
         try:
-            resp = requests.get(url, headers=headers, timeout=30)
+            resp = session.get(url, timeout=30)
             resp.raise_for_status()
             return resp.json()
         except Exception as e:
             st.error(f"Attempt {attempt+1} failed for {symbol}: {e}")
             time.sleep(random.randint(3, 7))
     return None
+
 
 def parse_data(symbol, data):
     if not data: return pd.DataFrame()
