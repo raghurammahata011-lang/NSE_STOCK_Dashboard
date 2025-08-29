@@ -4,8 +4,6 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import streamlit as st
-from selenium import webdriver
-from selenium.webdriver.firefox.options import Options
 import plotly.graph_objects as go
 from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
@@ -570,8 +568,8 @@ def run_streamlit_app():
     
     if fetch_clicked:
         with st.spinner("🔄 Fetching real-time data from NSE..."):
-            cookie_string = get_cookies_from_firefox()
-            data = fetch_option_chain(symbol, cookie_string)
+            session = get_nse_session()
+            data = fetch_option_chain(symbol, session)
 
         if data:
             df = parse_data(symbol, data)
