@@ -5,3 +5,10 @@ plotly
 scikit-learn
 openpyxl
 requests
+streamlit
+requests
+pandas
+numpy
+plotly
+openpyxl
+scikit-learn
